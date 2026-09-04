@@ -1,0 +1,13 @@
+# Gradle
+.gradle/
+build/
+
+# IDE
+.idea/
+*.iml
+local.properties
+
+# 系统签名密钥（切勿入库）
+*.jks
+# MiloYuan
+*.keystore

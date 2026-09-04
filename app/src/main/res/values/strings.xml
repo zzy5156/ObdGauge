@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">车况悬浮助手OBD</string>
+    <string name="main_title">车况悬浮助手</string>
+    <string name="section_data">实时车况（OBD）</string>
+    <string name="notification_text">悬浮窗运行中</string>
+
+    <string name="section_floating">悬浮窗</string>
+    <string name="floating_enable_title">启用悬浮窗</string>
+    <string name="floating_enable_summary">屏幕显示转速、油量等车况数据，位置与内容可自定义</string>
+    <string name="auto_boot_title">开机自启</string>
+    <string name="auto_boot_summary">开机后自动拉起悬浮窗服务</string>
+    <string name="section_font">悬浮窗字体</string>
+
+    <string name="items_title">悬浮窗显示内容</string>
+    <string name="items_summary">选择悬浮窗上显示哪些车况数据</string>
+    <string name="items_dialog_title">选择显示内容</string>
+    <string name="items_value">%1$d 项</string>
+    <string name="items_value_default">2 项</string>
+    <string name="toast_items_empty">至少选择一项显示</string>
+
+    <string name="columns_title">每行项数</string>
+    <string name="columns_summary">悬浮窗一行最多显示的数据项数，超出自动换行</string>
+    <string name="columns_dialog_title">每行显示项数</string>
+    <string name="columns_value">每行 %1$d 项</string>
+    <string name="columns_value_default">每行 2 项</string>
+
+    <string name="sort_title">悬浮窗排序</string>
+    <string name="sort_summary">调整悬浮窗数据项的显示顺序（上移/下移）</string>
+    <string name="sort_dialog_title">调整显示顺序</string>
+
+    <string name="pos_x_title">水平位置</string>
+    <string name="pos_y_title">垂直位置</string>
+    <string name="pos_summary">按屏幕百分比定位，调节后悬浮窗实时移动；触摸穿透保持不变</string>
+    <string name="pos_value">%1$d%%</string>
+
+    <string name="font_title">悬浮窗字体</string>
+    <string name="font_summary">内置免费商用字体，也可导入自己的字体文件（仅数值生效）</string>
+    <string name="font_dialog_title">选择字体</string>
+    <string name="font_system">系统默认</string>
+    <string name="font_custom">自定义字体文件</string>
+    <string name="font_custom_named">已导入：%1$s</string>
+    <string name="font_pick">导入字体文件…</string>
+    <string name="font_pick_ok">字体已导入并应用</string>
+    <string name="font_pick_fail">字体导入失败，请换一个 ttf/otf 文件试试</string>
+
+    <string name="crash_dialog_title">上次异常退出记录</string>
+    <string name="crash_clear">清除记录</string>
+
+    <string name="label_font_title">悬浮窗标签字体</string>
+    <string name="label_font_summary">数据项名称小字的字体；西文字体（如 Orbitron）不含中文，标签可能显示方块</string>
+    <string name="label_font_dialog_title">选择标签字体</string>
+    <string name="label_font_system">与系统一致</string>
+    <string name="label_font_value">与数值字体一致</string>
+    <string name="label_font_custom_named">已导入：%1$s</string>
+
+    <string name="item_name_rpm">发动机转速</string>
+    <string name="item_name_fuel">油量</string>
+    <string name="item_name_speed">车速</string>
+    <string name="item_name_coolant">水温</string>
+    <string name="item_name_battery">电池电量（SOC）</string>
+    <string name="item_name_power">电池功率</string>
+    <string name="item_name_voltage">电瓶电压</string>
+    <string name="item_name_intake">进气温度</string>
+    <string name="item_name_load">发动机负载</string>
+    <string name="item_name_throttle">节气门开度</string>
+    <string name="item_name_oiltemp">机油温度</string>
+
+    <string name="item_label_rpm">转速</string>
+    <string name="item_label_fuel">油量</string>
+    <string name="item_label_speed">车速</string>
+    <string name="item_label_coolant">水温</string>
+    <string name="item_label_battery">电池</string>
+    <string name="item_label_power">功率</string>
+    <string name="item_label_voltage">电压</string>
+    <string name="item_label_intake">进气</string>
+    <string name="item_label_load">负载</string>
+    <string name="item_label_throttle">节气门</string>
+    <string name="item_label_oiltemp">油温</string>
+
+    <string name="obd_device_title">OBD 读头设备</string>
+    <string name="obd_device_summary">点击选择 ELM327 蓝牙读头（支持扫描未配对设备）</string>
+    <string name="device_not_selected">未选择（自动识别）</string>
+    <string name="pick_device_title">选择 OBD 读头</string>
+    <string name="pick_scanning">正在扫描附近的读头…</string>
+    <string name="pick_rescan">重新扫描</string>
+    <string name="pick_unpaired">（未配对）</string>
+    <string name="pick_scan_unavailable">无法开始扫描（请授予蓝牙权限后重进）</string>
+    <string name="pick_none_found">扫描结束，未发现新读头</string>
+
+    <string name="label_rpm">转速</string>
+    <string name="label_fuel">油量</string>
+
+    <string name="state_bt_off">蓝牙未开启，请打开车机蓝牙</string>
+    <string name="state_no_device">未找到 ELM327 读头。车机系统蓝牙若不显示读头，请点击「OBD 读头设备」直接扫描附近未配对的读头</string>
+    <string name="state_connecting">正在连接 %1$s…</string>
+    <string name="state_connected">已连接 %1$s</string>
+    <string name="state_connect_fail">连接 %1$s 失败，5 秒后重试（请确认读头已插入 OBD 接口）</string>
+    <string name="state_error">OBD 异常：%1$s</string>
+
+    <string name="hint_obd_note">通过 OBD-II 蓝牙读头（ELM327）按 SAE J1979 标准协议读取：转速（010C）、油量（012F）、车速（010D）、水温（0105）、进气温度（010F）、电压（0142）、负载（0104）、节气门（0111）、机油温度（015C）。电池电量（SOC）优先尝试比亚迪厂商自定义 PID 221FFC，不支持时回退标准混动 PID 015B。电池功率优先用比亚迪厂商自定义 PID 220008（电池总电压）与 220009（电池电流）换算 U×I，无应答时回退标准混动 PID 019A（实测第五代 DM-i 可用），放电为正、充电为负，个别车型不支持时显示 --。不依赖车机系统权限。车机系统蓝牙界面若只显示手机、无法配对读头，可直接点击「OBD 读头设备」扫描并选择未配对的读头（如 Android-Vlink），连接时会自动发起配对（Vgate 配对码 1234）。混动车型发动机熄火时转速显示 0 或 -- 属正常现象；部分车型不支持的 PID 会显示 --。</string>
+    <string name="toast_overlay_missing">请先允许悬浮窗权限</string>
+    <string name="toast_floating_on">悬浮窗已开启</string>
+    <string name="toast_autoboot_on">已开启开机自启</string>
+    <string name="toast_autoboot_off">已关闭开机自启</string>
+    <string name="toast_autoboot_fail">设置开机自启失败</string>
+    <string name="toast_device_saved">已选择 OBD 读头</string>
+    <string name="toast_device_unpaired">已选择未配对读头，连接时若弹出配对请求请确认（Vgate 配对码 1234）</string>
+
+    <string name="fuel_calib_title">油量校准</string>
+    <string name="fuel_calib_summary">OBD 与仪表/比亚迪 APP 存在固有偏差，可按 APP 显示对齐</string>
+    <string name="fuel_calib_not_set">未校准</string>
+    <string name="fuel_calib_dialog_title">油量校准</string>
+    <string name="fuel_calib_message">当前应用显示 %1$d%%。请输入比亚迪 APP 或仪表显示的油量百分比（1–100），应用将按比例校准</string>
+    <string name="fuel_calib_reset">清除校准</string>
+    <string name="fuel_calib_invalid">暂无有效油量读数或输入无效，请稍后再试</string>
+
+    <string name="power_calib_title">功率校准</string>
+    <string name="power_calib_summary">读取值与仪表存在固定比例偏差时，可按倍率对齐</string>
+    <string name="power_calib_not_set">未校准</string>
+    <string name="power_calib_dialog_title">功率校准</string>
+    <string name="power_calib_message">显示值 = 读取值 × 补偿倍率。请输入补偿倍率（0.3–3.0），如仪表显示 6kW 时应用读取 4kW，则输入 1.5</string>
+    <string name="power_calib_reset">清除校准</string>
+    <string name="power_calib_invalid">倍率无效，请输入 0.3–3.0 之间的数字</string>
+
+    <string name="power_debug_title">电池功率探测记录</string>
+    <string name="power_debug_message">该车对电池功率的各条探测命令均未返回有效数据。请点击「复制记录」并把内容发给开发者，以便适配该车型的专用 PID。</string>
+    <string name="power_debug_copy">复制记录</string>
+    <string name="power_debug_copied">已复制到剪贴板</string>
+</resources>
