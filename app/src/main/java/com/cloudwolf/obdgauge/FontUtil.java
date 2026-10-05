@@ -26,6 +26,8 @@ public final class FontUtil {
     private static final String CUSTOM_FILE = "custom_font.ttf";
     private static final String CUSTOM_LABEL_FILE = "custom_font_label.ttf";
     private static final String LABEL_CACHE_KEY = "label_custom";
+    /** 系统细体缓存键（仪表风默认字重）。 */
+    private static final String LIGHT_CACHE_KEY = "system_light";
 
     /** 内置字体注册表（assets 文件名 → 展示名），全部允许免费商用。 */
     private static final Map<String, String> BUILTIN = new LinkedHashMap<>();
@@ -140,6 +142,25 @@ public final class FontUtil {
             t = Typeface.DEFAULT_BOLD;
         }
         CACHE.put(pref, t);
+        return t;
+    }
+
+    /**
+     * 系统细体（sans-serif-light）：仪表风默认字重。
+     * 原厂仪表信息是细字重，系统默认的 DEFAULT_BOLD 放在仪表上明显偏粗、不像原车风格。
+     */
+    public static Typeface light() {
+        Typeface cached = CACHE.get(LIGHT_CACHE_KEY);
+        if (cached != null) {
+            return cached;
+        }
+        Typeface t;
+        try {
+            t = Typeface.create("sans-serif-light", Typeface.NORMAL);
+        } catch (Throwable e) {
+            t = Typeface.DEFAULT;
+        }
+        CACHE.put(LIGHT_CACHE_KEY, t);
         return t;
     }
 

@@ -31,7 +31,7 @@
 
     <string name="pos_x_title">水平位置</string>
     <string name="pos_y_title">垂直位置</string>
-    <string name="pos_summary">按屏幕百分比定位，调节后悬浮窗实时移动；触摸穿透保持不变</string>
+    <string name="pos_summary">按屏幕百分比定位，调节后悬浮窗实时移动；中控屏与仪表屏各自记忆位置</string>
     <string name="pos_value">%1$d%%</string>
 
     <string name="font_title">悬浮窗字体</string>
@@ -127,4 +127,40 @@
     <string name="power_debug_message">该车对电池功率的各条探测命令均未返回有效数据。请点击「复制记录」并把内容发给开发者，以便适配该车型的专用 PID。</string>
     <string name="power_debug_copy">复制记录</string>
     <string name="power_debug_copied">已复制到剪贴板</string>
+
+    <!-- 悬浮窗目标屏幕（中控屏 / 仪表投屏面） -->
+    <string name="display_title">悬浮窗显示屏幕</string>
+    <string name="display_summary">可把悬浮窗画到仪表屏（车机把仪表投屏面开放给第三方应用时）</string>
+    <string name="display_dialog_title">选择悬浮窗所在屏幕</string>
+    <string name="display_main">中控屏（主屏）</string>
+    <string name="display_main_short">中控屏</string>
+    <string name="display_screen_label">屏幕 %1$d · %2$s</string>
+    <string name="display_screen_cluster">%1$s（疑似仪表投屏面）</string>
+    <string name="display_none">未检测到其他屏幕（点此查看诊断）</string>
+    <string name="display_short">仪表屏 %1$s</string>
+    <string name="display_missing">屏幕 %1$d（当前不可用）</string>
+    <string name="display_confirm_title">投屏到该屏幕？</string>
+    <string name="display_confirm_message">将把悬浮窗画在「%1$s」上。\n\n· 悬浮窗只占一小块区域且完全触摸穿透，但会盖住该屏原有画面的一部分；\n· 若仪表显示异常或想还原，在中控屏把本项改回「中控屏」即可；\n· 部分车机需要先在原车导航里把导航投到仪表一次，那块投屏面才会常驻可用。</string>
+    <string name="display_probe_log">诊断日志</string>
+    <string name="display_probe_fail_title">该屏幕暂时不能投屏</string>
+    <string name="display_probe_fail_message">系统拒绝了在本屏绘制第三方悬浮窗：\n%1$s\n\n常见原因：该屏是私有屏幕（只允许原厂仪表应用绘制），或仪表投屏面尚未被原车导航激活。可点「诊断日志」查看本应用能看到的全部屏幕并复制反馈。</string>
+    <string name="display_log_title">投屏诊断</string>
+    <string name="display_log_copy">复制诊断</string>
+    <string name="display_log_copied">已复制到剪贴板</string>
+    <string name="display_log_empty">暂无投屏记录</string>
+    <string name="display_env_header">本应用可见的屏幕：</string>
+    <string name="display_env_note">说明：仪表屏若不在上面的列表里，说明车机没把它作为公开屏幕暴露给第三方应用（原厂仪表走私有通道），此时无法投屏。</string>
+    <string name="display_log_header">最近投屏记录：</string>
+    <string name="toast_display_main">悬浮窗已切回中控屏</string>
+    <string name="toast_display_cluster">悬浮窗已切到仪表屏（默认贴底居中，可调）；若仪表上没看到，请先在原车导航里把导航投到仪表一次</string>
+
+    <!-- 悬浮窗样式 -->
+    <string name="style_title">悬浮窗样式</string>
+    <string name="style_summary">仪表风：透明底、细字重、淡分隔线，贴近原厂仪表信息；按屏幕分别记忆</string>
+    <string name="style_dialog_title">选择悬浮窗样式</string>
+    <string name="style_card">卡片风格（深色圆角底 + 细边框 + 粗字重）</string>
+    <string name="style_instrument">仪表风（透明底、细字重、无边框）</string>
+    <string name="style_value_card">卡片</string>
+    <string name="style_value_instrument">仪表风</string>
+    <string name="font_size_summary">字号 6–48sp（低分辨率仪表屏建议 6–10sp）</string>
 </resources>

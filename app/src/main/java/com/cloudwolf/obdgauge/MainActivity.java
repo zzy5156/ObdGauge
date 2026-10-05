@@ -16,6 +16,7 @@ import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -51,7 +52,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_CODE_FONT = 103;
     private static final int REQ_CODE_FONT_LABEL = 104;
 
-    private static final int FONT_MIN = 12;
+    /** 字号下限 6sp：仪表屏常见 1280×480@320dpi，12sp 在仪表上仍偏大。 */
+    private static final int FONT_MIN = 6;
     private static final int FONT_MAX = 48;
     private static final int FONT_STEP = 2;
 
@@ -59,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
     private final Map<String, TextView> mainValueTvs = new LinkedHashMap<>();
     private TextView stateTv;
     private TextView deviceValueTv;
+    private TextView displayValueTv;
     private TextView fuelCalibValueTv;
     private TextView powerCalibValueTv;
     private TextView itemsValueTv;
@@ -66,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView columnsValueTv;
     private TextView fontValueTv;
     private TextView labelFontValueTv;
+    private TextView styleValueTv;
     private TextView fontSizeValueTv;
     private TextView posXValueTv;
     private TextView posYValueTv;
@@ -114,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
         mainMetricsBox = findViewById(R.id.ll_main_metrics);
         stateTv = findViewById(R.id.tv_obd_state);
         deviceValueTv = findViewById(R.id.tv_device_value);
+        displayValueTv = findViewById(R.id.tv_display_value);
         fuelCalibValueTv = findViewById(R.id.tv_fuel_calib_value);
         powerCalibValueTv = findViewById(R.id.tv_power_calib_value);
         itemsValueTv = findViewById(R.id.tv_items_value);
@@ -121,6 +126,7 @@ public class MainActivity extends AppCompatActivity {
         columnsValueTv = findViewById(R.id.tv_columns_value);
         fontValueTv = findViewById(R.id.tv_font_value);
         labelFontValueTv = findViewById(R.id.tv_label_font_value);
+        styleValueTv = findViewById(R.id.tv_style_value);
         posXValueTv = findViewById(R.id.tv_pos_x_value);
         posYValueTv = findViewById(R.id.tv_pos_y_value);
         floatingSwitch = findViewById(R.id.switch_floating);
@@ -134,9 +140,11 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.row_obd_device).setOnClickListener(v -> pickDevice());
         findViewById(R.id.row_fuel_calib).setOnClickListener(v -> showFuelCalibDialog());
         findViewById(R.id.row_power_calib).setOnClickListener(v -> showPowerCalibDialog());
+        findViewById(R.id.row_float_display).setOnClickListener(v -> showDisplayDialog());
         findViewById(R.id.row_float_items).setOnClickListener(v -> showItemsDialog());
         findViewById(R.id.row_float_sort).setOnClickListener(v -> showSortDialog());
         findViewById(R.id.row_float_columns).setOnClickListener(v -> showColumnsDialog());
+        findViewById(R.id.row_float_style).setOnClickListener(v -> showStyleDialog());
         findViewById(R.id.row_float_font).setOnClickListener(v -> showFontDialog());
         findViewById(R.id.row_float_label_font).setOnClickListener(v -> showLabelFontDialog());
 
@@ -174,6 +182,8 @@ public class MainActivity extends AppCompatActivity {
         autoBootSwitch.setChecked(Prefs.isAutoBootEnabled(this));
         autoBootSwitch.setOnCheckedChangeListener(autoBootListener);
         refreshDeviceLabel();
+        refreshDisplayLabel();
+        refreshScreenDependentControls();
         refreshFuelCalibLabel();
         refreshPowerCalibLabel();
         refreshItemsLabel();
@@ -948,6 +958,211 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ------------------------------------------------------------------ 悬浮窗显示屏幕（中控 / 仪表）
+
+    /**
+     * 选择悬浮窗所在屏幕。车机的仪表屏（比亚迪 DiLink 的 fission 投屏面）若被系统作为公开
+     * Display 暴露出来，第三方应用就能把悬浮窗画上去——这里列出本应用能看到的全部屏幕，
+     * 选中即生效（真正加窗由 FloatingService 完成，失败自动回退中控屏）。
+     */
+    private void showDisplayDialog() {
+        final List<Display> displays = DisplayUtil.listDisplays(this);
+        final List<Integer> ids = new ArrayList<>();
+        final List<String> labels = new ArrayList<>();
+        ids.add(Display.DEFAULT_DISPLAY);
+        labels.add(getString(R.string.display_main));
+        int checked = 0;
+        int current = Prefs.getFloatDisplayId(this);
+        for (Display d : displays) {
+            if (d.getDisplayId() == Display.DEFAULT_DISPLAY) {
+                continue;
+            }
+            ids.add(d.getDisplayId());
+            labels.add(DisplayUtil.label(this, d));
+            if (d.getDisplayId() == current) {
+                checked = ids.size() - 1;
+            }
+        }
+        if (ids.size() == 1) {
+            // 没有第二块屏：说明车机没把仪表投屏面开放给第三方应用
+            labels.add(getString(R.string.display_none));
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.display_dialog_title)
+                .setSingleChoiceItems(labels.toArray(new String[0]), checked, (dialog, which) -> {
+                    if (which >= ids.size()) {
+                        dialog.dismiss();
+                        showScreenLogDialog();
+                        return;
+                    }
+                    dialog.dismiss();
+                    chooseDisplay(ids.get(which));
+                })
+                .setNeutralButton(R.string.display_probe_log, (dialog, which) -> showScreenLogDialog())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** 选中某块屏幕：非主屏先确认风险，再实测能否加窗，成功才持久化。 */
+    private void chooseDisplay(int displayId) {
+        if (displayId == Prefs.getFloatDisplayId(this)) {
+            return;
+        }
+        if (displayId == Display.DEFAULT_DISPLAY) {
+            commitDisplayChoice(Display.DEFAULT_DISPLAY);
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, R.string.toast_overlay_missing, Toast.LENGTH_LONG).show();
+            return;
+        }
+        final Display target = DisplayUtil.findDisplay(this, displayId, "");
+        if (target == null) {
+            Toast.makeText(this, getString(R.string.display_missing, displayId), Toast.LENGTH_LONG).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.display_confirm_title)
+                .setMessage(getString(R.string.display_confirm_message, DisplayUtil.label(this, target)))
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> applyDisplayChoice(target))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** 实测目标屏幕能否承载本应用的悬浮窗（与真正投屏同一套 API），可行才切换。 */
+    private void applyDisplayChoice(Display target) {
+        String error = DisplayUtil.probeOverlay(this, target);
+        if (error != null) {
+            Prefs.appendScreenLog(this, "屏幕 " + target.getDisplayId() + " 探测失败："
+                    + error + "（该屏不允许第三方应用绘制窗口）");
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.display_probe_fail_title)
+                    .setMessage(getString(R.string.display_probe_fail_message, error))
+                    .setPositiveButton(R.string.display_probe_log, (dialog, which) -> showScreenLogDialog())
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            refreshDisplayLabel();
+            return;
+        }
+        Prefs.appendScreenLog(this, "屏幕 " + target.getDisplayId() + " 探测通过："
+                + DisplayUtil.describe(target));
+        commitDisplayChoice(target.getDisplayId());
+    }
+
+    /** 保存目标屏幕：位置按屏幕分别记忆（仪表屏默认贴底居中），悬浮窗由服务自动搬过去。 */
+    private void commitDisplayChoice(int displayId) {
+        Display target = DisplayUtil.findDisplay(this, displayId, "");
+        // 先记屏幕名再记 id：服务监听的是 id，写 id 时就会重挂窗口，名字要在那之前就位
+        Prefs.setFloatDisplayName(this, target == null ? "" : DisplayUtil.name(target));
+        Prefs.setFloatDisplayId(this, displayId);
+        refreshDisplayLabel();
+        // 位置、字号、样式都按屏幕分别记忆，切屏后要跟着切到该屏的记忆值
+        refreshScreenDependentControls();
+        if (Prefs.isFloatingEnabled(this)) {
+            // 服务监听设置变化会自动搬窗，这里只是服务没在跑时的兜底
+            FloatingService.start(this);
+        }
+        Toast.makeText(this, displayId == Display.DEFAULT_DISPLAY
+                ? R.string.toast_display_main : R.string.toast_display_cluster, Toast.LENGTH_SHORT).show();
+    }
+
+    private void refreshDisplayLabel() {
+        int id = Prefs.getFloatDisplayId(this);
+        if (id == Display.DEFAULT_DISPLAY) {
+            displayValueTv.setText(R.string.display_main_short);
+            return;
+        }
+        Display d = DisplayUtil.findDisplay(this, id, Prefs.getFloatDisplayName(this));
+        if (d == null) {
+            displayValueTv.setText(getString(R.string.display_missing, id));
+            return;
+        }
+        displayValueTv.setText(getString(R.string.display_short, DisplayUtil.sizeText(d)));
+    }
+
+    /** 位置滑块跟随当前目标屏幕（中控屏与仪表屏各自记忆位置）。 */
+    private void refreshPositionControls() {
+        if (posXSeekBar == null || posYSeekBar == null) {
+            return;
+        }
+        posXSeekBar.setProgress(Prefs.getPosX(this));
+        posYSeekBar.setProgress(Prefs.getPosY(this));
+        updatePosLabels();
+    }
+
+    /** 切屏后刷新所有「按屏幕分别记忆」的设置：位置、字号、样式。 */
+    private void refreshScreenDependentControls() {
+        refreshPositionControls();
+        if (fontSeekBar != null) {
+            int size = clampFont(Prefs.getFontSize(this));
+            fontSeekBar.setProgress(size - FONT_MIN);
+            updateFontLabel(size);
+        }
+        refreshStyleLabel();
+    }
+
+    // ------------------------------------------------------------------ 悬浮窗样式
+
+    /**
+     * 悬浮窗样式：卡片风＝深色圆角底 + 细边框 + 粗字重（中控屏默认）；
+     * 仪表风＝透明底、细字重、淡分隔线（仪表屏默认），用来贴合原厂仪表信息的观感。
+     */
+    private void showStyleDialog() {
+        final String[] values = new String[]{Prefs.STYLE_CARD, Prefs.STYLE_INSTRUMENT};
+        String[] labels = new String[]{
+                getString(R.string.style_card), getString(R.string.style_instrument)};
+        int checked = Prefs.STYLE_INSTRUMENT.equals(Prefs.getFloatStyle(this)) ? 1 : 0;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.style_dialog_title)
+                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
+                    Prefs.setFloatStyle(this, values[which]);
+                    refreshStyleLabel();
+                    dialog.dismiss();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void refreshStyleLabel() {
+        styleValueTv.setText(Prefs.STYLE_INSTRUMENT.equals(Prefs.getFloatStyle(this))
+                ? R.string.style_value_instrument : R.string.style_value_card);
+    }
+
+    /** 投屏诊断：列出本应用能看到的全部屏幕 + 最近投屏记录（车机上没有 ADB，靠它反馈）。 */
+    private void showScreenLogDialog() {
+        final String text = screenDiagnostics();
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.display_log_title)
+                .setMessage(text)
+                .setPositiveButton(R.string.display_log_copy,
+                        (dialog, which) -> copyText(text, R.string.display_log_copied))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private String screenDiagnostics() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(getString(R.string.display_env_header)).append('\n');
+        for (Display d : DisplayUtil.listDisplays(this)) {
+            sb.append("• ").append(DisplayUtil.describe(d)).append('\n');
+        }
+        sb.append('\n').append(getString(R.string.display_env_note)).append('\n');
+        String log = Prefs.getScreenLog(this);
+        sb.append('\n').append(getString(R.string.display_log_header)).append('\n');
+        sb.append(log.isEmpty() ? getString(R.string.display_log_empty) : log);
+        return sb.toString();
+    }
+
+    private void copyText(String text, int toastRes) {
+        try {
+            android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                    getSystemService(Context.CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("obd_gauge_screen", text));
+            Toast.makeText(this, toastRes, Toast.LENGTH_SHORT).show();
+        } catch (Throwable ignored) {
+        }
+    }
+
     // ------------------------------------------------------------------ 油量校准
 
     /**
@@ -1083,13 +1298,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void copyPowerDebug(String log) {
-        try {
-            android.content.ClipboardManager cm = (android.content.ClipboardManager)
-                    getSystemService(Context.CLIPBOARD_SERVICE);
-            cm.setPrimaryClip(android.content.ClipData.newPlainText("obd_power_probe", log));
-            Toast.makeText(this, R.string.power_debug_copied, Toast.LENGTH_SHORT).show();
-        } catch (Throwable ignored) {
-        }
+        copyText(log, R.string.power_debug_copied);
     }
 
     // ------------------------------------------------------------------ 字号

@@ -3,8 +3,12 @@ package com.cloudwolf.obdgauge;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
+import android.view.Display;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -16,6 +20,11 @@ public class Prefs {
     public static final String KEY_FLOATING_ENABLED = "floating_enabled";
     public static final String KEY_AUTO_BOOT_ENABLED = "auto_boot_enabled";
     public static final String KEY_FONT_SIZE = "floating_font_size";
+    /** 仪表屏（附加屏）的独立字号记忆：低分辨率屏用同样的 sp 会比中控显大。 */
+    public static final String KEY_FONT_SIZE_ALT = "floating_font_size_alt";
+    /** 悬浮窗样式：card（卡片）/ instrument（仪表风），按屏幕分别记忆。 */
+    public static final String KEY_FLOAT_STYLE = "float_style";
+    public static final String KEY_FLOAT_STYLE_ALT = "float_style_alt";
     public static final String KEY_TEXT_COLOR = "floating_text_color";
     public static final String KEY_BG_COLOR = "floating_bg_color";
     public static final String KEY_OBD_ADDRESS = "obd_address";
@@ -36,6 +45,15 @@ public class Prefs {
     public static final String KEY_FLOAT_POS_X = "float_pos_x";
     /** 悬浮窗垂直位置（屏幕可用高度的百分比 0–100）。 */
     public static final String KEY_FLOAT_POS_Y = "float_pos_y";
+    /** 悬浮窗目标屏幕 id（0 = 中控主屏；其余为仪表投屏面等附加屏）。 */
+    public static final String KEY_FLOAT_DISPLAY_ID = "float_display_id";
+    /** 目标屏幕名（display id 会随固件/重启变化，按 id 找不到时用名字回退匹配）。 */
+    public static final String KEY_FLOAT_DISPLAY_NAME = "float_display_name";
+    /** 附加屏（仪表投屏面）的独立位置记忆：与中控屏分开记。 */
+    public static final String KEY_FLOAT_POS_X_ALT = "float_pos_x_alt";
+    public static final String KEY_FLOAT_POS_Y_ALT = "float_pos_y_alt";
+    /** 投屏诊断日志（最新在前；车机上没有 ADB，这是唯一能把现场带回来的信息）。 */
+    public static final String KEY_SCREEN_LOG = "screen_log";
     /** 悬浮窗数值字体：system / 内置 assets 文件名 / custom。 */
     public static final String KEY_FLOAT_FONT = "float_font";
     /** 用户导入字体的展示名。 */
@@ -46,9 +64,19 @@ public class Prefs {
     public static final String KEY_CUSTOM_LABEL_FONT_NAME = "custom_label_font_name";
 
     public static final int DEFAULT_FONT_SIZE = 24;
+    /** 仪表屏默认字号：仪表屏分辨率低（常见 1280×480@320dpi），同样的 sp 会比中控显大。 */
+    public static final int DEFAULT_FONT_SIZE_ALT = 10;
+    /** 悬浮窗样式取值：中控屏默认卡片，仪表屏默认仪表风。 */
+    public static final String STYLE_CARD = "card";
+    public static final String STYLE_INSTRUMENT = "instrument";
     public static final int DEFAULT_COLUMNS = 2;
     public static final int DEFAULT_POS_X = 50;
     public static final int DEFAULT_POS_Y = 0;
+    /** 仪表投屏面的默认位置：贴底居中（仪表上悬浮窗默认在底部，仍可随时调）。 */
+    public static final int DEFAULT_POS_X_ALT = 50;
+    public static final int DEFAULT_POS_Y_ALT = 100;
+    /** 投屏诊断日志最多保留的条数。 */
+    private static final int SCREEN_LOG_MAX_LINES = 16;
     public static final String DEFAULT_FONT = "system";
     /** 油量校准系数默认 1.0（不校准）。 */
     public static final float FUEL_CALIB_DEFAULT = 1.0f;
@@ -75,12 +103,34 @@ public class Prefs {
         sp(context).edit().putBoolean(KEY_AUTO_BOOT_ENABLED, enabled).apply();
     }
 
+    /** 悬浮窗数值字号（按屏幕分别记忆：仪表屏默认更小）。 */
     public static int getFontSize(Context context) {
-        return sp(context).getInt(KEY_FONT_SIZE, DEFAULT_FONT_SIZE);
+        boolean alt = isSecondaryDisplay(context);
+        return sp(context).getInt(alt ? KEY_FONT_SIZE_ALT : KEY_FONT_SIZE,
+                alt ? DEFAULT_FONT_SIZE_ALT : DEFAULT_FONT_SIZE);
     }
 
     public static void setFontSize(Context context, int size) {
-        sp(context).edit().putInt(KEY_FONT_SIZE, size).apply();
+        sp(context).edit().putInt(isSecondaryDisplay(context) ? KEY_FONT_SIZE_ALT : KEY_FONT_SIZE, size).apply();
+    }
+
+    /** 悬浮窗样式（按屏幕分别记忆）：中控默认卡片，仪表默认仪表风。 */
+    public static String getFloatStyle(Context context) {
+        boolean alt = isSecondaryDisplay(context);
+        String def = alt ? STYLE_INSTRUMENT : STYLE_CARD;
+        String saved = sp(context).getString(alt ? KEY_FLOAT_STYLE_ALT : KEY_FLOAT_STYLE, def);
+        return saved == null ? def : saved;
+    }
+
+    public static void setFloatStyle(Context context, String style) {
+        sp(context).edit()
+                .putString(isSecondaryDisplay(context) ? KEY_FLOAT_STYLE_ALT : KEY_FLOAT_STYLE, style)
+                .apply();
+    }
+
+    /** 当前屏幕是否用仪表风（透明底、细字重、淡分隔线）。 */
+    public static boolean isInstrumentStyle(Context context) {
+        return STYLE_INSTRUMENT.equals(getFloatStyle(context));
     }
 
     public static int getTextColor(Context context) {
@@ -209,19 +259,87 @@ public class Prefs {
     }
 
     public static int getPosX(Context context) {
-        return clamp(sp(context).getInt(KEY_FLOAT_POS_X, DEFAULT_POS_X), 0, 100);
+        boolean alt = isSecondaryDisplay(context);
+        return clamp(sp(context).getInt(alt ? KEY_FLOAT_POS_X_ALT : KEY_FLOAT_POS_X,
+                alt ? DEFAULT_POS_X_ALT : DEFAULT_POS_X), 0, 100);
     }
 
     public static void setPosX(Context context, int pct) {
-        sp(context).edit().putInt(KEY_FLOAT_POS_X, clamp(pct, 0, 100)).apply();
+        sp(context).edit().putInt(isSecondaryDisplay(context) ? KEY_FLOAT_POS_X_ALT : KEY_FLOAT_POS_X,
+                clamp(pct, 0, 100)).apply();
     }
 
     public static int getPosY(Context context) {
-        return clamp(sp(context).getInt(KEY_FLOAT_POS_Y, DEFAULT_POS_Y), 0, 100);
+        boolean alt = isSecondaryDisplay(context);
+        return clamp(sp(context).getInt(alt ? KEY_FLOAT_POS_Y_ALT : KEY_FLOAT_POS_Y,
+                alt ? DEFAULT_POS_Y_ALT : DEFAULT_POS_Y), 0, 100);
     }
 
     public static void setPosY(Context context, int pct) {
-        sp(context).edit().putInt(KEY_FLOAT_POS_Y, clamp(pct, 0, 100)).apply();
+        sp(context).edit().putInt(isSecondaryDisplay(context) ? KEY_FLOAT_POS_Y_ALT : KEY_FLOAT_POS_Y,
+                clamp(pct, 0, 100)).apply();
+    }
+
+    // ------------------------------------------------------------------ 悬浮窗目标屏幕（中控 / 仪表）
+
+    /** 悬浮窗目标屏幕 id（0 = 中控主屏）。 */
+    public static int getFloatDisplayId(Context context) {
+        return sp(context).getInt(KEY_FLOAT_DISPLAY_ID, Display.DEFAULT_DISPLAY);
+    }
+
+    public static void setFloatDisplayId(Context context, int displayId) {
+        sp(context).edit().putInt(KEY_FLOAT_DISPLAY_ID, displayId).apply();
+    }
+
+    public static String getFloatDisplayName(Context context) {
+        String name = sp(context).getString(KEY_FLOAT_DISPLAY_NAME, "");
+        return name == null ? "" : name;
+    }
+
+    public static void setFloatDisplayName(Context context, String name) {
+        sp(context).edit().putString(KEY_FLOAT_DISPLAY_NAME, name == null ? "" : name).apply();
+    }
+
+    /** 是否选了中控屏以外的屏幕（即仪表投屏面）。 */
+    public static boolean isSecondaryDisplay(Context context) {
+        return getFloatDisplayId(context) != Display.DEFAULT_DISPLAY;
+    }
+
+    public static String getScreenLog(Context context) {
+        String log = sp(context).getString(KEY_SCREEN_LOG, "");
+        return log == null ? "" : log;
+    }
+
+    /**
+     * 追加一条投屏记录（最新在前，最多保留 {@link #SCREEN_LOG_MAX_LINES} 条）。
+     * 车机上无法连 ADB，用户可直接在「诊断日志」里复制这些记录反馈适配。
+     */
+    public static void appendScreenLog(Context context, String line) {
+        if (TextUtils.isEmpty(line)) {
+            return;
+        }
+        try {
+            String stamp = new SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+            String old = getScreenLog(context);
+            StringBuilder sb = new StringBuilder(stamp).append(' ').append(line);
+            int lines = 1;
+            if (!old.isEmpty()) {
+                for (String l : old.split("\n")) {
+                    if (lines >= SCREEN_LOG_MAX_LINES) {
+                        break;
+                    }
+                    sb.append('\n').append(l);
+                    lines++;
+                }
+            }
+            sp(context).edit().putString(KEY_SCREEN_LOG, sb.toString()).apply();
+        } catch (Throwable ignored) {
+            // 日志失败不能影响投屏本身
+        }
+    }
+
+    public static void clearScreenLog(Context context) {
+        sp(context).edit().remove(KEY_SCREEN_LOG).apply();
     }
 
     public static String getFont(Context context) {
